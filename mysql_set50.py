@@ -2,6 +2,70 @@ import json
 import mysql.connector
 from datetime import datetime
 
+# Mapping Company Symbols to Names
+company_names = {
+    "ADVANC": "บริษัท แอดวานซ์ อินโฟร์ เซอร์วิส จำกัด (มหาชน)",
+    "AOT": "บริษัท ท่าอากาศยานไทย จำกัด (มหาชน)",
+    "AWC": "บริษัท แอสเสท เวิรด์ คอร์ป จำกัด (มหาชน)",
+    "BBL": "ธนาคารกรุงเทพ จำกัด (มหาชน)",
+    "BCP": "บริษัท บางจาก คอร์ปอเรชั่น จำกัด (มหาชน)",
+    "BDMS": "บริษัท กรุงเทพดุสิตเวชการ จำกัด (มหาชน)",
+    "BEM": "บริษัท ทางด่วนและรถไฟฟ้ากรุงเทพ จำกัด (มหาชน)",
+    "BGRIM": "บริษัท บี.กริม เพาเวอร์ จำกัด (มหาชน)",
+    "BH": "บริษัท โรงพยาบาลบำรุงราษฎร์ จำกัด (มหาชน)",
+    "BJC": "บริษัท เบอร์ลี่ ยุคเกอร์ จำกัด (มหาชน)",
+    "BTS": "บริษัท บีทีเอส กรุ๊ป โฮลดิ้งส์ จำกัด (มหาชน)",
+    "CBG": "บริษัท คาราบาวกรุ๊ป จำกัด (มหาชน)",
+    "CENTEL": "บริษัท โรงแรมเซ็นทรัลพลาซา จำกัด (มหาชน)",
+    "CPALL": "บริษัท ซีพี ออลล์ จำกัด (มหาชน)",
+    "CPF": "บริษัท เจริญโภคภัณฑ์อาหาร จำกัด (มหาชน)",
+    "CPN": "บริษัท เซ็นทรัลพัฒนา จำกัด (มหาชน)",
+    "CRC": "บริษัท เซ็นทรัล รีเทล คอร์ปอเรชั่น จำกัด (มหาชน)",
+    "DELTA": "บริษัท เดลต้า อีเลคโทรนิคส์ (ประเทศไทย) จำกัด (มหาชน)",
+    "EA": "บริษัท พลังงานบริสุทธิ์ จำกัด (มหาชน)",
+    "EGCO": "บริษัท ผลิตไฟฟ้า จำกัด (มหาชน)",
+    "GLOBAL": "บริษัท สยามโกลบอลเฮ้าส์ จำกัด (มหาชน)",
+    "GPSC": "บริษัท โกลบอล เพาเวอร์ ซินเนอร์ยี่ จำกัด (มหาชน)",
+    "GULF": "บริษัท กัลฟ์ เอ็นเนอร์จี ดีเวลลอปเมนท์ จำกัด (มหาชน)",
+    "HMPRO": "บริษัท โฮม โปรดักส์ เซ็นเตอร์ จำกัด (มหาชน)",
+    "INTUCH": "บริษัท อินทัช โฮลดิ้งส์ จำกัด (มหาชน)",
+    "ITC": "บริษัท ไอ-เทล คอร์ปอเรชั่น จำกัด (มหาชน)",
+    "IVL": "บริษัท อินโดรามา เวนเจอร์ส จำกัด (มหาชน)",
+    "KBANK": "ธนาคารกสิกรไทย จำกัด (มหาชน)",
+    "KTB": "ธนาคารกรุงไทย จำกัด (มหาชน)",
+    "KTC": "บริษัท บัตรกรุงไทย จำกัด (มหาชน)",
+    "LH": "บริษัท แลนด์ แอนด์ เฮ้าส์ จำกัด (มหาชน)",
+    "MINT": "บริษัท ไมเนอร์ อินเตอร์เนชั่นแนล จำกัด (มหาชน)",
+    "MTC": "บริษัท เมืองไทย แคปปิตอล จำกัด (มหาชน)",
+    "OR": "บริษัท ปตท. น้ำมันและการค้าปลีก จำกัด (มหาชน)",
+    "OSP": "บริษัท โอสถสภา จำกัด (มหาชน)",
+    "PTT": "บริษัท ปตท. จำกัด (มหาชน)",
+    "PTTEP": "บริษัท ปตท. สำรวจและผลิตปิโตรเลียม จำกัด (มหาชน)",
+    "PTTGC": "บริษัท พีทีที โกลบอล เคมิคอล จำกัด (มหาชน)",
+    "RATCH": "บริษัท ราช กรุ๊ป จำกัด (มหาชน)",
+    "SCB": "ธนาคารไทยพาณิชย์ จำกัด (มหาชน)",
+    "SCC": "บริษัท ปูนซิเมนต์ไทย จำกัด (มหาชน)",
+    "SCGP": "บริษัท เอสซีจี แพคเกจจิ้ง จำกัด (มหาชน)",
+    "TIDLOR": "บริษัท เงินติดล้อ จำกัด (มหาชน)",
+    "TISCO": "บริษัท ทิสโก้ไฟแนนเชียลกรุ๊ป จำกัด (มหาชน)",
+    "TLI": "บริษัท ไทยประกันชีวิต จำกัด (มหาชน)",
+    "TOP": "บริษัท ไทยออยล์ จำกัด (มหาชน)",
+    "TRUE": "บริษัท ทรู คอร์ปอเรชั่น จำกัด (มหาชน)",
+    "TTB": "ธนาคารทหารไทยธนชาต จำกัด (มหาชน)",
+    "TU": "บริษัท ไทยยูเนี่ยน กรุ๊ป จำกัด (มหาชน)",
+    "WHA": "บริษัท ดับบลิวเอชเอ คอร์ปอเรชั่น จำกัด (มหาชน)"
+}
+
+# Function to Get the Last Date of a Given Quarter
+def get_last_date_of_quarter(year, quarter):
+    last_dates = {
+        1: f"{year}-03-31",
+        2: f"{year}-06-30",
+        3: f"{year}-09-30",
+        4: f"{year}-12-31",
+    }
+    return last_dates[quarter]
+
 # MySQL Connection
 def connect_db():
     return mysql.connector.connect(
@@ -11,13 +75,17 @@ def connect_db():
         database="set50"
     )
 
-# Function: Get Company ID
-def get_company_id(cursor, symbol, name):
+# Function: Get Company ID (with name update)
+def get_company_id(cursor, symbol):
+    company_name = company_names.get(symbol, symbol)  # Get name or use symbol as fallback
+
     cursor.execute("SELECT id FROM Company WHERE symbol = %s", (symbol,))
     result = cursor.fetchone()
+
     if result:
         return result[0]
-    cursor.execute("INSERT INTO Company (symbol, name) VALUES (%s, %s)", (symbol, name))
+
+    cursor.execute("INSERT INTO Company (symbol, name) VALUES (%s, %s)", (symbol, company_name))
     return cursor.lastrowid
 
 # Function: Get Period ID
@@ -52,9 +120,9 @@ def insert_financial_data(cursor, data):
 # Insert Market Data
 def insert_market_data(cursor, data):
     for record in data:
-        company_id = get_company_id(cursor, record['symbol'], record['symbol'])
+        company_id = get_company_id(cursor, record['symbol'])
         year, quarter = datetime.strptime(record['date'], '%Y-%m-%d').year, (datetime.strptime(record['date'], '%Y-%m-%d').month - 1) // 3 + 1
-        period_id = get_period_id(cursor, year, quarter)
+        period_id = get_period_id(cursor, year, quarter,get_last_date_of_quarter(year, quarter))
 
         cursor.execute("""
         INSERT INTO MarketData (company_id, period_id, prior, open, high, low, close, average, aom_volume, aom_value,
@@ -69,8 +137,8 @@ def insert_market_data(cursor, data):
 # Insert Financial Ratios
 def insert_ratios(cursor, data):
     for record in data:
-        company_id = get_company_id(cursor, record['symbol'], record['symbol'])
-        period_id = get_period_id(cursor, record['year'], record['quarter'])
+        company_id = get_company_id(cursor, record['symbol'])
+        period_id = get_period_id(cursor, record['year'], record['quarter'],record['dateAsof'])
 
         ratios = {
             'ROE': record.get('roe'),
