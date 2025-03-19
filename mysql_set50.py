@@ -75,9 +75,84 @@ def connect_db():
         database="set50"
     )
 
+# Function to Create Tables (Only Runs Once)
+def create_tables(cursor):
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS Company (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            symbol VARCHAR(10) UNIQUE NOT NULL,
+            name VARCHAR(255) NOT NULL
+        )
+    """)
+    
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS Period (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            year INT NOT NULL,
+            quarter INT NOT NULL,
+            date DATE NOT NULL,
+            UNIQUE(year, quarter, date) 
+        )
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS FinancialMetrics (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            company_id INT,
+            period_id INT,
+            total_assets DECIMAL(18,2),
+            total_liabilities DECIMAL(18,2),
+            shareholder_equity DECIMAL(18,2),
+            total_equity DECIMAL(18,2),
+            total_revenue_quarter DECIMAL(18,2),
+            total_revenue_accum DECIMAL(18,2),
+            total_expenses_quarter DECIMAL(18,2),
+            total_expenses_accum DECIMAL(18,2),
+            operating_cash_flow DECIMAL(18,2),
+            investing_cash_flow DECIMAL(18,2),
+            financing_cash_flow DECIMAL(18,2),
+            FOREIGN KEY (company_id) REFERENCES Company(id) ON DELETE CASCADE,
+            FOREIGN KEY (period_id) REFERENCES Period(id) ON DELETE CASCADE
+        )
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS MarketData (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            company_id INT,
+            period_id INT,
+            prior DECIMAL(18,2),
+            open DECIMAL(18,2),
+            high DECIMAL(18,2),
+            low DECIMAL(18,2),
+            close DECIMAL(18,2),
+            average DECIMAL(18,2),
+            aom_volume DECIMAL(18,2),
+            aom_value DECIMAL(18,2),
+            tr_volume DECIMAL(18,2),
+            tr_value DECIMAL(18,2),
+            total_volume DECIMAL(18,2),
+            total_value DECIMAL(18,2),
+            FOREIGN KEY (company_id) REFERENCES Company(id) ON DELETE CASCADE,
+            FOREIGN KEY (period_id) REFERENCES Period(id) ON DELETE CASCADE
+        )
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS Ratios (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            company_id INT,
+            period_id INT,
+            type VARCHAR(50),
+            value DECIMAL(18,2),
+            FOREIGN KEY (company_id) REFERENCES Company(id) ON DELETE CASCADE,
+            FOREIGN KEY (period_id) REFERENCES Period(id) ON DELETE CASCADE
+        )
+    """)
+
 # Function: Get Company ID (with name update)
 def get_company_id(cursor, symbol):
-    company_name = company_names.get(symbol, symbol)  # Get name or use symbol as fallback
+    company_name = company_names.get(symbol)  # Get name or use symbol as fallback
 
     cursor.execute("SELECT id FROM Company WHERE symbol = %s", (symbol,))
     result = cursor.fetchone()
@@ -162,6 +237,9 @@ try:
     connection = connect_db()
     cursor = connection.cursor()
 
+    # Create tables if they do not exist
+    create_tables(cursor)
+    
     # Load JSON Data
     with open('FilteredFinancialData.json') as fin_file:
         financial_data = json.load(fin_file)
