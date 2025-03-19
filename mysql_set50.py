@@ -11,7 +11,7 @@ def connect_db():
         database="set50"
     )
 
-# Helper Function: Get Company ID
+# Function: Get Company ID
 def get_company_id(cursor, symbol, name):
     cursor.execute("SELECT id FROM Company WHERE symbol = %s", (symbol,))
     result = cursor.fetchone()
@@ -20,31 +20,33 @@ def get_company_id(cursor, symbol, name):
     cursor.execute("INSERT INTO Company (symbol, name) VALUES (%s, %s)", (symbol, name))
     return cursor.lastrowid
 
-# Helper Function: Get Period ID
-def get_period_id(cursor, year, quarter):
+# Function: Get Period ID
+def get_period_id(cursor, year, quarter, date_asof):
     cursor.execute("SELECT id FROM Period WHERE year = %s AND quarter = %s", (year, quarter))
     result = cursor.fetchone()
     if result:
         return result[0]
-    cursor.execute("INSERT INTO Period (year, quarter) VALUES (%s, %s)", (year, quarter))
+    cursor.execute("INSERT INTO Period (year, quarter, date) VALUES (%s, %s, %s)", (year, quarter, date_asof))
     return cursor.lastrowid
 
 # Insert Financial Data
 def insert_financial_data(cursor, data):
     for record in data:
-        company_id = get_company_id(cursor, record['symbol'], record['symbol'])
-        period_id = get_period_id(cursor, record['year'], record['quarter'])
+        symbol = record['symbol']
+        date_asof = record['dateAsof']
+        year, quarter = datetime.strptime(date_asof, '%Y-%m-%d').year, (datetime.strptime(date_asof, '%Y-%m-%d').month - 1) // 3 + 1
+
+        company_id = get_company_id(cursor, symbol)
+        period_id = get_period_id(cursor, year, quarter, date_asof)
 
         cursor.execute("""
         INSERT INTO FinancialMetrics (company_id, period_id, total_assets, total_liabilities, shareholder_equity,
-            total_equity, total_revenue_quarter, total_revenue_accum, total_expenses_quarter, total_expenses_accum,
-            operating_cash_flow, investing_cash_flow, financing_cash_flow)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            total_equity, total_revenue_quarter, total_revenue_accum)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
         """, (
             company_id, period_id, record.get('totalAssets'), record.get('totalLiabilities'),
             record.get('shareholderEquity'), record.get('totalEquity'), record.get('totalRevenueQuarter'),
-            record.get('totalRevenueAccum'), record.get('totalExpensesQuarter'), record.get('totalExpensesAccum'),
-            record.get('operatingCashFlow'), record.get('investingCashFlow'), record.get('financingCashFlow')
+            record.get('totalRevenueAccum')
         ))
 
 # Insert Market Data
