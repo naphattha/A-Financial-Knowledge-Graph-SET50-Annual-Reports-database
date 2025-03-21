@@ -56,16 +56,6 @@ company_names = {
     "WHA": "บริษัท ดับบลิวเอชเอ คอร์ปอเรชั่น จำกัด (มหาชน)"
 }
 
-# Function to Get the Last Date of a Given Quarter
-def get_last_date_of_quarter(year, quarter):
-    last_dates = {
-        1: f"{year}-03-31",
-        2: f"{year}-06-30",
-        3: f"{year}-09-30",
-        4: f"{year}-12-31",
-    }
-    return last_dates[quarter]
-
 # MySQL Connection
 def connect_db():
     return mysql.connector.connect(
@@ -197,7 +187,7 @@ def insert_market_data(cursor, data):
     for record in data:
         company_id = get_company_id(cursor, record['symbol'])
         year, quarter = datetime.strptime(record['date'], '%Y-%m-%d').year, (datetime.strptime(record['date'], '%Y-%m-%d').month - 1) // 3 + 1
-        period_id = get_period_id(cursor, year, quarter,get_last_date_of_quarter(year, quarter))
+        period_id = get_period_id(cursor, year, quarter,record['date'])
 
         cursor.execute("""
         INSERT INTO MarketData (company_id, period_id, prior, open, high, low, close, average, aom_volume, aom_value,
