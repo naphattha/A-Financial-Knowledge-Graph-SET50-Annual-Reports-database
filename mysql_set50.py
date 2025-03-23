@@ -74,7 +74,7 @@ def create_tables(cursor):
             name VARCHAR(255) NOT NULL
         )
     """)
-    
+
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS Period (
             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -92,12 +92,19 @@ def create_tables(cursor):
             period_id INT,
             total_assets DECIMAL(18,2),
             total_liabilities DECIMAL(18,2),
+            paidup_share_capital DECIMAL(18,2),
             shareholder_equity DECIMAL(18,2),
             total_equity DECIMAL(18,2),
             total_revenue_quarter DECIMAL(18,2),
             total_revenue_accum DECIMAL(18,2),
             total_expenses_quarter DECIMAL(18,2),
             total_expenses_accum DECIMAL(18,2),
+            ebit_quarter DECIMAL(18,2),
+            ebit_accum DECIMAL(18,2),
+            net_profit_quarter DECIMAL(18,2),
+            net_profit_accum DECIMAL(18,2),
+            eps_quarter DECIMAL(18,2),
+            eps_accum DECIMAL(18,2),
             operating_cash_flow DECIMAL(18,2),
             investing_cash_flow DECIMAL(18,2),
             financing_cash_flow DECIMAL(18,2),
@@ -111,6 +118,7 @@ def create_tables(cursor):
             id INT AUTO_INCREMENT PRIMARY KEY,
             company_id INT,
             period_id INT,
+            date DATE NOT NULL,
             prior DECIMAL(18,2),
             open DECIMAL(18,2),
             high DECIMAL(18,2),
@@ -129,18 +137,32 @@ def create_tables(cursor):
     """)
 
     cursor.execute("""
-        CREATE TABLE IF NOT EXISTS Ratios (
+        CREATE TABLE IF NOT EXISTS FinancialRatios (
             id INT AUTO_INCREMENT PRIMARY KEY,
             company_id INT,
             period_id INT,
             type VARCHAR(50),
             value DECIMAL(18,2),
+            date DATE NOT NULL,
             FOREIGN KEY (company_id) REFERENCES Company(id) ON DELETE CASCADE,
             FOREIGN KEY (period_id) REFERENCES Period(id) ON DELETE CASCADE
         )
     """)
 
-# Function: Get Company ID (with name update)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS MarketRatios (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            company_id INT,
+            period_id INT,
+            type VARCHAR(50),
+            value DECIMAL(18,2),
+            date DATE NOT NULL,
+            FOREIGN KEY (company_id) REFERENCES Company(id) ON DELETE CASCADE,
+            FOREIGN KEY (period_id) REFERENCES Period(id) ON DELETE CASCADE
+        )
+    """)
+
+# Function: Get Company ID 
 def get_company_id(cursor, symbol):
     company_name = company_names.get(symbol)  # Get name or use symbol as fallback
 
@@ -173,34 +195,23 @@ def insert_financial_data(cursor, data):
         period_id = get_period_id(cursor, year, quarter, date_asof)
 
         cursor.execute("""
-        INSERT INTO FinancialMetrics (company_id, period_id, total_assets, total_liabilities, shareholder_equity,
-            total_equity, total_revenue_quarter, total_revenue_accum)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+        INSERT INTO FinancialMetrics (company_id, period_id, total_assets, total_liabilities, paidup_share_capital, 
+            shareholder_equity, total_equity, total_revenue_quarter, total_revenue_accum, total_expenses_quarter, 
+            total_expenses_accum, ebit_quarter, ebit_accum, net_profit_quarter, net_profit_accum, eps_quarter, 
+            eps_accum, operating_cash_flow, investing_cash_flow, financing_cash_flow)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """, (
             company_id, period_id, record.get('totalAssets'), record.get('totalLiabilities'),
-            record.get('shareholderEquity'), record.get('totalEquity'), record.get('totalRevenueQuarter'),
-            record.get('totalRevenueAccum')
-        ))
-
-# Insert Market Data
-def insert_market_data(cursor, data):
-    for record in data:
-        company_id = get_company_id(cursor, record['symbol'])
-        year, quarter = datetime.strptime(record['date'], '%Y-%m-%d').year, (datetime.strptime(record['date'], '%Y-%m-%d').month - 1) // 3 + 1
-        period_id = get_period_id(cursor, year, quarter,record['date'])
-
-        cursor.execute("""
-        INSERT INTO MarketData (company_id, period_id, prior, open, high, low, close, average, aom_volume, aom_value,
-            tr_volume, tr_value, total_volume, total_value)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-        """, (
-            company_id, period_id, record.get('prior'), record.get('open'), record.get('high'), record.get('low'),
-            record.get('close'), record.get('average'), record.get('aomVolume'), record.get('aomValue'),
-            record.get('trVolume'), record.get('trValue'), record.get('totalVolume'), record.get('totalValue')
+            record.get('paidupShareCapital'), record.get('shareholderEquity'), record.get('totalEquity'),
+            record.get('totalRevenueQuarter'), record.get('totalRevenueAccum'), record.get('totalExpensesQuarter'),
+            record.get('totalExpensesAccum'), record.get('ebitQuarter'), record.get('ebitAccum'),
+            record.get('netProfitQuarter'), record.get('netProfitAccum'), record.get('epsQuarter'),
+            record.get('epsAccum'), record.get('operatingCashFlow'), record.get('investingCashFlow'),
+            record.get('financingCashFlow')
         ))
 
 # Insert Financial Ratios
-def insert_ratios(cursor, data):
+def insert_financial_ratios(cursor, data):
     for record in data:
         company_id = get_company_id(cursor, record['symbol'])
         period_id = get_period_id(cursor, record['year'], record['quarter'],record['dateAsof'])
@@ -218,9 +229,50 @@ def insert_ratios(cursor, data):
         for ratio_type, value in ratios.items():
             if value is not None:
                 cursor.execute("""
-                INSERT INTO Ratios (company_id, period_id, type, value) 
+                INSERT INTO FinancialRatios (company_id, period_id, type, value) 
                 VALUES (%s, %s, %s, %s)
                 """, (company_id, period_id, ratio_type, value))
+                
+# Insert Market Data
+def insert_market_data(cursor, data):
+    for record in data:
+        company_id = get_company_id(cursor, record['symbol'])
+        year, quarter = datetime.strptime(record['date'], '%Y-%m-%d').year, (datetime.strptime(record['date'], '%Y-%m-%d').month - 1) // 3 + 1
+        period_id = get_period_id(cursor, year, quarter,record['date'])
+
+        cursor.execute("""
+        INSERT INTO MarketData (company_id, period_id, prior, open, high, low, close, average, aom_volume, aom_value,
+            tr_volume, tr_value, total_volume, total_value)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        """, (
+            company_id, period_id, record.get('prior'), record.get('open'), record.get('high'), record.get('low'),
+            record.get('close'), record.get('average'), record.get('aomVolume'), record.get('aomValue'),
+            record.get('trVolume'), record.get('trValue'), record.get('totalVolume'), record.get('totalValue')
+        ))
+
+# Insert Market Ratios
+def insert_market_ratios(cursor, data):
+    for record in data:
+        company_id = get_company_id(cursor, record['symbol'])
+        date_asof = record['date']
+        year, quarter = datetime.strptime(date_asof, '%Y-%m-%d').year, (datetime.strptime(date_asof, '%Y-%m-%d').month - 1) // 3 + 1
+        period_id = get_period_id(cursor, year, quarter, date_asof)
+
+        market_ratios = {
+            'PE': record.get('pe'),
+            'PBV': record.get('pbv'),
+            'BVPS': record.get('bvps'),
+            'DividendYield': record.get('dividendYield'),
+            'MarketCap': record.get('marketCap'),
+            'VolumeTurnover': record.get('volumeTurnover')
+        }
+
+        for ratio_type, value in market_ratios.items():
+            if value is not None:
+                cursor.execute("""
+                INSERT INTO MarketRatios (company_id, period_id, type, value, date) 
+                VALUES (%s, %s, %s, %s, %s)
+                """, (company_id, period_id, ratio_type, value, date_asof))
 
 # Main Execution
 try:
@@ -234,11 +286,12 @@ try:
     with open('FilteredFinancialData.json') as fin_file:
         financial_data = json.load(fin_file)
         insert_financial_data(cursor, financial_data)
-        insert_ratios(cursor, financial_data)
+        insert_financial_ratios(cursor, financial_data)
 
     with open('FilteredEODData.json') as eod_file:
         market_data = json.load(eod_file)
         insert_market_data(cursor, market_data)
+        insert_market_ratios(cursor, market_data)
 
     connection.commit()
     print("Data inserted successfully!")
