@@ -13,15 +13,21 @@ This project involve constructing two separate databases — one relational (MyS
 
 ## Installation
 Clone the Repository:
+```bash
 git clone https://github.com/naphattha/A-Financial-Knowledge-Graph-SET50-Annual-Reports-database.git
 cd A-Financial-Knowledge-Graph-SET50-Annual-Reports-database
+```
 
 Set Up a Virtual Environment:
+```bash
 python3 -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
+```
 
 Install Dependencies:
+```bash
 pip install -r requirements.txt
+```
 
 ---
 
