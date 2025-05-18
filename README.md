@@ -8,6 +8,7 @@ This project involve constructing two separate databases — one relational (MyS
 - **Neo4j**: Community or Enterprise Edition  
 - **MySQL**: Version 8.0 or higher  
 - **Node.js and npm**: For frontend development (if applicable)
+- **Data Files**: FilteredFinancialData.json and FilteredEODData.json
   
 ---
 
@@ -31,8 +32,43 @@ pip install -r requirements.txt
 
 ---
 
+## Required Data Files:
+
+You need two JSON files from the SET API, placed in the project directory:
+
+FilteredFinancialData.json: financial statement data
+
+FilteredEODData.json: end-of-day stock prices
+
+---
+
 ## Set Up Databases:
 
-MySQL: Create a database and import the necessary schema and data using mysql_set50.py.
+- **MySQL**: Create a database and import the necessary schema and data using mysql_set50.py.
 
-Neo4j: Start the Neo4j server and run the neo4j_set50.ipynb notebook to populate the graph database.
+1.Start your MySQL server.
+
+2.Create a new database (e.g., SET50_DB).
+
+3.Run the script to populate the database:
+```bash
+python mysql_set50.py
+```
+
+- **Neo4j**: Start the Neo4j server and run the neo4j_set50.ipynb notebook to populate the graph database.
+
+1.Start your Neo4j Desktop or Neo4j server.
+
+2.Open and run the neo4j_set50.ipynb Jupyter Notebook to populate the graph database.
+
+
+- **Extending Beyond SET50**
+To add companies not in the original SET50:
+
+Append their symbol-name entries to the company_names list or database table.
+
+Ensure their financial and EOD data exists in the JSON files.
+
+Rerun the import scripts.
+
+
